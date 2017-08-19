@@ -1466,9 +1466,9 @@ void flexinit (int argc, char **argv)
 
 void readin (void)
 {
-	static char yy_stdinit[] = "FILE *yyin = stdin, *yyout = stdout;";
+	static char yy_stdinit[] = "YY_FILE yyin = stdin, yyout = stdout;";
 	static char yy_nostdinit[] =
-		"FILE *yyin = NULL, *yyout = NULL;";
+		"YY_FILE yyin = YY_NULL, yyout = YY_NULL;";
 
 	line_directive_out(NULL, 1);
 

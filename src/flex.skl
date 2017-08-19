@@ -218,10 +218,44 @@ m4_ifdef( [[M4_YY_TABLES_EXTERNAL]],
 
 /* begin standard C headers. */
 %if-c-only
+#ifndef YY_BARE_METAL
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+
+#ifndef YY_TYPEDEF_YY_SIZE_T
+#define YY_TYPEDEF_YY_SIZE_T
+typedef size_t yy_size_t;
+#endif
+
+typedef FILE * YY_FILE;
+
+static inline void * yy_platform_memset ( void * ptr, int value, yy_size_t num ) {
+	return memset(ptr, value, num);
+}
+
+static inline yy_size_t yy_platform_strlen ( const char * str ) {
+	return strlen(str);
+}
+#else
+
+#ifndef YY_TYPEDEF_YY_SIZE_T
+#define YY_TYPEDEF_YY_SIZE_T
+typedef unsigned long yy_size_t;
+typedef long yy_ssize_t;
+#endif
+
+typedef void* YY_FILE;
+
+void __attribute__((__noreturn__)) yy_platform_fatal_error(const char *msg);
+int yy_platform_input(YY_FILE yyin, char *buf, int max_size);
+void yy_platform_output(YY_FILE yyout, const char *buf, int size);
+
+void * yy_platform_memset ( void * ptr, int value, yy_size_t num );
+yy_size_t yy_platform_strlen ( const char * str );
+#endif
+
 %endif
 
 %if-tables-serialization
@@ -394,18 +428,13 @@ m4_ifdef( [[M4_YY_NOT_IN_HEADER]],
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 #endif
 
-#ifndef YY_TYPEDEF_YY_SIZE_T
-#define YY_TYPEDEF_YY_SIZE_T
-typedef size_t yy_size_t;
-#endif
-
 %if-not-reentrant
 extern int yyleng;
 %endif
 
 %if-c-only
 %if-not-reentrant
-extern FILE *yyin, *yyout;
+extern YY_FILE yyin, yyout;
 %endif
 %endif
 
@@ -463,7 +492,7 @@ m4_ifdef( [[M4_YY_NOT_IN_HEADER]],
 struct yy_buffer_state
 	{
 %if-c-only
-	FILE *yy_input_file;
+	YY_FILE yy_input_file;
 %endif
 
 %if-c++-only
@@ -490,12 +519,14 @@ struct yy_buffer_state
 	 */
 	int yy_is_our_buffer;
 
+#ifndef YY_BARE_METAL
 	/* Whether this is an "interactive" input source; if so, and
 	 * if we're using stdio for input, then we want to use getc()
 	 * instead of fread(), to make sure we stop fetching input after
 	 * each newline.
 	 */
 	int yy_is_interactive;
+#endif
 
 	/* Whether we're considered to be at the beginning of a line.
 	 * If so, '^' rules will be active on the next match, otherwise
@@ -537,9 +568,9 @@ m4_ifdef( [[M4_YY_NOT_IN_HEADER]],
 %if-not-reentrant
 
 /* Stack of input buffers. */
-static size_t yy_buffer_stack_top = 0; /**< index of top of stack. */
-static size_t yy_buffer_stack_max = 0; /**< capacity of stack. */
-static YY_BUFFER_STATE * yy_buffer_stack = NULL; /**< Stack as an array. */
+static yy_size_t yy_buffer_stack_top = 0; /**< index of top of stack. */
+static yy_size_t yy_buffer_stack_max = 0; /**< capacity of stack. */
+static YY_BUFFER_STATE * yy_buffer_stack = YY_NULL; /**< Stack as an array. */
 %endif
 %ok-for-header
 %endif
@@ -550,13 +581,13 @@ m4_ifdef( [[M4_YY_NOT_IN_HEADER]],
  * future we want to put the buffer states in a more general
  * "scanner state".
  *
- * Returns the top of the stack, or NULL.
+ * Returns the top of the stack, or YY_NULL.
  */
 #define YY_CURRENT_BUFFER ( YY_G(yy_buffer_stack) \
                           ? YY_G(yy_buffer_stack)[YY_G(yy_buffer_stack_top)] \
-                          : NULL)
+                          : YY_NULL)
 /* Same as previous macro, but useful when we know that the buffer stack is not
- * NULL or when we need an lvalue. For internal use only.
+ * YY_NULL or when we need an lvalue. For internal use only.
  */
 #define YY_CURRENT_BUFFER_LVALUE YY_G(yy_buffer_stack)[YY_G(yy_buffer_stack_top)]
 ]])
@@ -571,7 +602,7 @@ static int yy_n_chars;		/* number of characters read into yy_ch_buf */
 int yyleng;
 
 /* Points to current character in buffer. */
-static char *yy_c_buf_p = NULL;
+static char *yy_c_buf_p = YY_NULL;
 static int yy_init = 0;		/* whether we need to initialize */
 static int yy_start = 0;	/* start state number */
 
@@ -582,9 +613,9 @@ static int yy_did_buffer_switch_on_eof;
 %ok-for-header
 %endif
 
-void yyrestart ( FILE *input_file M4_YY_PROTO_LAST_ARG );
+void yyrestart ( YY_FILE input_file M4_YY_PROTO_LAST_ARG );
 void yy_switch_to_buffer ( YY_BUFFER_STATE new_buffer M4_YY_PROTO_LAST_ARG );
-YY_BUFFER_STATE yy_create_buffer ( FILE *file, int size M4_YY_PROTO_LAST_ARG );
+YY_BUFFER_STATE yy_create_buffer ( YY_FILE file, int size M4_YY_PROTO_LAST_ARG );
 void yy_delete_buffer ( YY_BUFFER_STATE b M4_YY_PROTO_LAST_ARG );
 void yy_flush_buffer ( YY_BUFFER_STATE b M4_YY_PROTO_LAST_ARG );
 void yypush_buffer_state ( YY_BUFFER_STATE new_buffer M4_YY_PROTO_LAST_ARG );
@@ -594,7 +625,7 @@ m4_ifdef( [[M4_YY_NOT_IN_HEADER]],
 [[
 static void yyensure_buffer_stack ( M4_YY_PROTO_ONLY_ARG );
 static void yy_load_buffer_state ( M4_YY_PROTO_ONLY_ARG );
-static void yy_init_buffer ( YY_BUFFER_STATE b, FILE *file M4_YY_PROTO_LAST_ARG );
+static void yy_init_buffer ( YY_BUFFER_STATE b, YY_FILE file M4_YY_PROTO_LAST_ARG );
 #define YY_FLUSH_BUFFER yy_flush_buffer( YY_CURRENT_BUFFER M4_YY_CALL_LAST_ARG)
 ]])
 
@@ -605,12 +636,17 @@ YY_BUFFER_STATE yy_scan_bytes ( const char *bytes, int len M4_YY_PROTO_LAST_ARG 
 %endif
 
 void *yyalloc ( yy_size_t M4_YY_PROTO_LAST_ARG );
+#ifdef YY_BARE_METAL
+void *yyrealloc ( void *, yy_size_t, yy_size_t M4_YY_PROTO_LAST_ARG );
+#else
 void *yyrealloc ( void *, yy_size_t M4_YY_PROTO_LAST_ARG );
+#endif
 void yyfree ( void * M4_YY_PROTO_LAST_ARG );
 
 m4_ifdef( [[M4_YY_NOT_IN_HEADER]],
 [[
 #define yy_new_buffer yy_create_buffer
+#ifndef YY_BARE_METAL
 #define yy_set_interactive(is_interactive) \
 	{ \
 	if ( ! YY_CURRENT_BUFFER ){ \
@@ -620,6 +656,7 @@ m4_ifdef( [[M4_YY_NOT_IN_HEADER]],
 	} \
 	YY_CURRENT_BUFFER_LVALUE->yy_is_interactive = is_interactive; \
 	}
+#endif
 #define yy_set_bol(at_bol) \
 	{ \
 	if ( ! YY_CURRENT_BUFFER ){\
@@ -672,6 +709,7 @@ m4_ifdef( [[M4_YY_IN_HEADER]], [[#endif]])
 
 m4_ifdef( [[M4_YY_NO_UNISTD_H]],,
 [[
+#ifndef YY_BARE_METAL
 #ifndef YY_NO_UNISTD_H
 /* Special case for "unistd.h", since it is non-ANSI. We include it way
  * down here because we want the user's section 1 to have been scanned first.
@@ -683,6 +721,7 @@ m4_ifdef( [[M4_YY_NO_UNISTD_H]],,
 %if-c++-only
 #include <unistd.h>
 %endif
+#endif
 #endif
 ]])
 
@@ -710,9 +749,9 @@ struct yyguts_t
     YY_EXTRA_TYPE yyextra_r;
 
     /* The rest are the same as the globals declared in the non-reentrant scanner. */
-    FILE *yyin_r, *yyout_r;
-    size_t yy_buffer_stack_top; /**< index of top of stack. */
-    size_t yy_buffer_stack_max; /**< capacity of stack. */
+    YY_FILE yyin_r, yyout_r;
+    yy_size_t yy_buffer_stack_top; /**< index of top of stack. */
+    yy_size_t yy_buffer_stack_max; /**< capacity of stack. */
     YY_BUFFER_STATE * yy_buffer_stack; /**< Stack as an array. */
     char yy_hold_char;
     int yy_n_chars;
@@ -833,22 +872,22 @@ void yyset_extra ( YY_EXTRA_TYPE user_defined M4_YY_PROTO_LAST_ARG );
 
 m4_ifdef( [[M4_YY_NO_GET_IN]],,
 [[
-FILE *yyget_in ( M4_YY_PROTO_ONLY_ARG );
+YY_FILE yyget_in ( M4_YY_PROTO_ONLY_ARG );
 ]])
 
 m4_ifdef( [[M4_YY_NO_SET_IN]],,
 [[
-void yyset_in  ( FILE * _in_str M4_YY_PROTO_LAST_ARG );
+void yyset_in  ( YY_FILE _in_str M4_YY_PROTO_LAST_ARG );
 ]])
 
 m4_ifdef( [[M4_YY_NO_GET_OUT]],,
 [[
-FILE *yyget_out ( M4_YY_PROTO_ONLY_ARG );
+YY_FILE yyget_out ( M4_YY_PROTO_ONLY_ARG );
 ]])
 
 m4_ifdef( [[M4_YY_NO_SET_OUT]],,
 [[
-void yyset_out  ( FILE * _out_str M4_YY_PROTO_LAST_ARG );
+void yyset_out  ( YY_FILE _out_str M4_YY_PROTO_LAST_ARG );
 ]])
 
 m4_ifdef( [[M4_YY_NO_GET_LENG]],,
@@ -963,7 +1002,7 @@ m4_ifdef( [[M4_YY_NOT_REENTRANT]],
     [[
         static int yy_start_stack_ptr = 0;
         static int yy_start_stack_depth = 0;
-        static int *yy_start_stack = NULL;
+        static int *yy_start_stack = YY_NULL;
     ]])
 ]])
 
@@ -1009,7 +1048,11 @@ m4_ifdef( [[M4_YY_NOT_IN_HEADER]],
 /* This used to be an fputs(), but since the string might contain NUL's,
  * we now use fwrite().
  */
-#define ECHO do { if (fwrite( yytext, (size_t) yyleng, 1, yyout )) {} } while (0)
+#ifndef YY_BARE_METAL
+#define ECHO do { if (fwrite( yytext, (yy_size_t) yyleng, 1, yyout )) {} } while (0)
+#else
+#define ECHO do { yy_platform_output(yyout, yytext, yyleng); } while (0)
+#endif
 %endif
 %if-c++-only C++ definition
 #define ECHO LexerOutput( yytext, yyleng )
@@ -1023,6 +1066,7 @@ m4_ifdef( [[M4_YY_NOT_IN_HEADER]],
  * is returned in "result".
  */
 #ifndef YY_INPUT
+#ifndef YY_BARE_METAL
 #define YY_INPUT(buf,result,max_size) \
 %% [5.0] fread()/read() definition of YY_INPUT goes here unless we're doing C++ \
 \
@@ -1030,6 +1074,17 @@ m4_ifdef( [[M4_YY_NOT_IN_HEADER]],
 	if ( (int)(result = LexerInput( (char *) buf, max_size )) < 0 ) \
 		YY_FATAL_ERROR( "input in flex scanner failed" );
 %endif
+
+#else
+#define YY_INPUT(buf,result,max_size) \
+		{ \
+			result = yy_platform_input(yyin, buf, max_size); \
+			if( result < 0) \
+			{ \
+			YY_FATAL_ERROR( "input in flex scanner failed" ); \
+            } \
+        }
+#endif
 
 #endif
 ]])
@@ -1067,7 +1122,7 @@ m4_ifdef( [[M4_YY_NOT_IN_HEADER]],
 m4preproc_include(`tables_shared.h')
 
 /* Load the DFA tables from the given stream.  */
-int yytables_fload (FILE * fp M4_YY_PROTO_LAST_ARG);
+int yytables_fload (YY_FILE fp M4_YY_PROTO_LAST_ARG);
 
 /* Unload the tables from memory. */
 int yytables_destroy (M4_YY_PROTO_ONLY_ARG);
@@ -1080,7 +1135,7 @@ int yytables_destroy (M4_YY_PROTO_ONLY_ARG);
 struct yytbl_dmap {
 	enum yytbl_id dm_id;/**< table identifier */
 	void  **dm_arr;		/**< address of pointer to store the deserialized table. */
-	size_t  dm_sz;		/**< local sizeof() each element in table. */
+	yy_size_t  dm_sz;		/**< local sizeof() each element in table. */
 };
 
 /** A {0,0,0}-terminated list of structs, forming the map */
@@ -1092,7 +1147,7 @@ static struct yytbl_dmap yydmap[] =
 
 /** A tables-reader object to maintain some state in the read. */
 struct yytbl_reader {
-    FILE * fp; /**< input stream */
+    YY_FILE fp; /**< input stream */
     flex_uint32_t bread; /**< bytes read since beginning of current tableset */
 };
 
@@ -1219,7 +1274,11 @@ m4_ifdef( [[M4_YY_USES_REJECT]],
 
 		if ( ! yyin )
 %if-c-only
+#ifndef YY_BARE_METAL
 			yyin = stdin;
+#else
+			YY_FATAL_ERROR( "yyin is NULL in yylex()" );
+#endif
 %endif
 %if-c++-only
 			yyin.rdbuf(std::cin.rdbuf());
@@ -1227,7 +1286,11 @@ m4_ifdef( [[M4_YY_USES_REJECT]],
 
 		if ( ! yyout )
 %if-c-only
+#ifndef YY_BARE_METAL
 			yyout = stdout;
+#else
+			YY_FATAL_ERROR( "yyout is NULL in yylex()" );
+#endif
 %endif
 %if-c++-only
 			yyout.rdbuf(std::cout.rdbuf());
@@ -1451,9 +1514,9 @@ void yyFlexLexer::ctor_common()
 	yy_more_offset = yy_prev_more_offset = 0;
 
 	yy_start_stack_ptr = yy_start_stack_depth = 0;
-	yy_start_stack = NULL;
+	yy_start_stack = YY_NULL;
 
-	yy_buffer_stack = NULL;
+	yy_buffer_stack = YY_NULL;
 	yy_buffer_stack_top = 0;
 	yy_buffer_stack_max = 0;
 
@@ -1621,6 +1684,9 @@ m4_ifdef( [[M4_YY_USES_REJECT]],
 
 			if ( b->yy_is_our_buffer )
 				{
+#ifdef YY_BARE_METAL
+				int old_size = b->yy_buf_size;
+#endif
 				int new_size = b->yy_buf_size * 2;
 
 				if ( new_size <= 0 )
@@ -1631,11 +1697,14 @@ m4_ifdef( [[M4_YY_USES_REJECT]],
 				b->yy_ch_buf = (char *)
 					/* Include room in for 2 EOB chars. */
 					yyrealloc( (void *) b->yy_ch_buf,
+#ifdef YY_BARE_METAL
+							 (yy_size_t) old_size,
+#endif
 							 (yy_size_t) (b->yy_buf_size + 2) M4_YY_CALL_LAST_ARG );
 				}
 			else
 				/* Can't grow it, we don't own it. */
-				b->yy_ch_buf = NULL;
+				b->yy_ch_buf = YY_NULL;
 
 			if ( ! b->yy_ch_buf )
 				YY_FATAL_ERROR(
@@ -1681,7 +1750,11 @@ m4_ifdef( [[M4_YY_USES_REJECT]],
 		/* Extend the array by 50%, plus the number we really need. */
 		int new_size = YY_G(yy_n_chars) + number_to_move + (YY_G(yy_n_chars) >> 1);
 		YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *) yyrealloc(
-			(void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf, (yy_size_t) new_size M4_YY_CALL_LAST_ARG );
+			(void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf,
+#ifdef YY_BARE_METAL
+			(yy_size_t) YY_CURRENT_BUFFER_LVALUE->yy_buf_size,
+#endif
+			(yy_size_t) new_size M4_YY_CALL_LAST_ARG );
 		if ( ! YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
 			YY_FATAL_ERROR( "out of dynamic memory in yy_get_next_buffer()" );
 		/* "- 2" to take care of EOB's */
@@ -1892,7 +1965,7 @@ m4_ifdef( [[M4_YY_USE_LINENO]],
  * @note This function does not reset the start condition to @c INITIAL .
  */
 %if-c-only
-    void yyrestart  YYFARGS1( FILE *,input_file)
+    void yyrestart  YYFARGS1( YY_FILE,input_file)
 %endif
 %if-c++-only
     void yyFlexLexer::yyrestart( std::istream& input_file )
@@ -1993,7 +2066,7 @@ static void yy_load_buffer_state  (M4_YY_DEF_ONLY_ARG)
  * @return the allocated buffer state.
  */
 %if-c-only
-    YY_BUFFER_STATE yy_create_buffer  YYFARGS2( FILE *,file, int ,size)
+    YY_BUFFER_STATE yy_create_buffer  YYFARGS2( YY_FILE,file, int ,size)
 %endif
 %if-c++-only
     YY_BUFFER_STATE yyFlexLexer::yy_create_buffer( std::istream& file, int size )
@@ -2066,14 +2139,16 @@ static void yy_load_buffer_state  (M4_YY_DEF_ONLY_ARG)
  * such as during a yyrestart() or at EOF.
  */
 %if-c-only
-    static void yy_init_buffer  YYFARGS2( YY_BUFFER_STATE ,b, FILE *,file)
+    static void yy_init_buffer  YYFARGS2( YY_BUFFER_STATE ,b, YY_FILE,file)
 %endif
 %if-c++-only
     void yyFlexLexer::yy_init_buffer( YY_BUFFER_STATE b, std::istream& file )
 %endif
 
 {
+#ifndef YY_BARE_METAL
 	int oerrno = errno;
+#endif
     M4_YY_DECL_GUTS_VAR();
 
 	yy_flush_buffer( b M4_YY_CALL_LAST_ARG);
@@ -2095,6 +2170,7 @@ static void yy_load_buffer_state  (M4_YY_DEF_ONLY_ARG)
         b->yy_bs_column = 0;
     }
 
+#ifndef YY_BARE_METAL
 %if-c-only
 m4_ifdef( [[M4_YY_ALWAYS_INTERACTIVE]],
 [[
@@ -2113,7 +2189,10 @@ m4_ifdef( [[M4_YY_ALWAYS_INTERACTIVE]],
 %if-c++-only
 	b->yy_is_interactive = 0;
 %endif
+#endif
+#ifndef YY_BARE_METAL
 	errno = oerrno;
+#endif
 }
 
 /** Discard all buffered characters. On the next scan, YY_INPUT will be called.
@@ -2164,7 +2243,7 @@ void yyFlexLexer::yypush_buffer_state (YY_BUFFER_STATE new_buffer)
 %endif
 {
     M4_YY_DECL_GUTS_VAR();
-	if (new_buffer == NULL)
+	if (new_buffer == YY_NULL)
 		return;
 
 	yyensure_buffer_stack(M4_YY_CALL_ONLY_ARG);
@@ -2207,7 +2286,7 @@ void yyFlexLexer::yypop_buffer_state (void)
 		return;
 
 	yy_delete_buffer(YY_CURRENT_BUFFER M4_YY_CALL_LAST_ARG);
-	YY_CURRENT_BUFFER_LVALUE = NULL;
+	YY_CURRENT_BUFFER_LVALUE = YY_NULL;
 	if (YY_G(yy_buffer_stack_top) > 0)
 		--YY_G(yy_buffer_stack_top);
 
@@ -2247,7 +2326,7 @@ void yyFlexLexer::yyensure_buffer_stack(void)
 			YY_FATAL_ERROR( "out of dynamic memory in yyensure_buffer_stack()" );
 
 
-		memset(YY_G(yy_buffer_stack), 0, num_to_alloc * sizeof(struct yy_buffer_state*));
+		yy_platform_memset(YY_G(yy_buffer_stack), 0, num_to_alloc * sizeof(struct yy_buffer_state*));
 
 		YY_G(yy_buffer_stack_max) = num_to_alloc;
 		YY_G(yy_buffer_stack_top) = 0;
@@ -2262,13 +2341,16 @@ void yyFlexLexer::yyensure_buffer_stack(void)
 		num_to_alloc = YY_G(yy_buffer_stack_max) + grow_size;
 		YY_G(yy_buffer_stack) = (struct yy_buffer_state**)yyrealloc
 								(YY_G(yy_buffer_stack),
+#ifdef YY_BARE_METAL
+								YY_G(yy_buffer_stack_max) * sizeof(struct yy_buffer_state*),
+#endif
 								num_to_alloc * sizeof(struct yy_buffer_state*)
 								M4_YY_CALL_LAST_ARG);
 		if ( ! YY_G(yy_buffer_stack) )
 			YY_FATAL_ERROR( "out of dynamic memory in yyensure_buffer_stack()" );
 
 		/* zero only the new slots.*/
-		memset(YY_G(yy_buffer_stack) + YY_G(yy_buffer_stack_max), 0, grow_size * sizeof(struct yy_buffer_state*));
+		yy_platform_memset(YY_G(yy_buffer_stack) + YY_G(yy_buffer_stack_max), 0, grow_size * sizeof(struct yy_buffer_state*));
 		YY_G(yy_buffer_stack_max) = num_to_alloc;
 	}
 }
@@ -2295,7 +2377,7 @@ YY_BUFFER_STATE yy_scan_buffer  YYFARGS2( char *,base, yy_size_t ,size)
 	     base[size-2] != YY_END_OF_BUFFER_CHAR ||
 	     base[size-1] != YY_END_OF_BUFFER_CHAR )
 		/* They forgot to leave room for the EOB's. */
-		return NULL;
+		return YY_NULL;
 
 	b = (YY_BUFFER_STATE) yyalloc( sizeof( struct yy_buffer_state ) M4_YY_CALL_LAST_ARG );
 	if ( ! b )
@@ -2304,9 +2386,11 @@ YY_BUFFER_STATE yy_scan_buffer  YYFARGS2( char *,base, yy_size_t ,size)
 	b->yy_buf_size = (int) (size - 2);	/* "- 2" to take care of EOB's */
 	b->yy_buf_pos = b->yy_ch_buf = base;
 	b->yy_is_our_buffer = 0;
-	b->yy_input_file = NULL;
+	b->yy_input_file = YY_NULL;
 	b->yy_n_chars = b->yy_buf_size;
+#ifndef YY_BARE_METAL
 	b->yy_is_interactive = 0;
+#endif
 	b->yy_at_bol = 1;
 	b->yy_fill_buffer = 0;
 	b->yy_buffer_status = YY_BUFFER_NEW;
@@ -2334,7 +2418,7 @@ YY_BUFFER_STATE yy_scan_string YYFARGS1( const char *, yystr)
 {
     m4_dnl M4_YY_DECL_GUTS_VAR();
 
-	return yy_scan_bytes( yystr, (int) strlen(yystr) M4_YY_CALL_LAST_ARG);
+	return yy_scan_bytes( yystr, (int) yy_platform_strlen(yystr) M4_YY_CALL_LAST_ARG);
 }
 %endif
 ]])
@@ -2406,7 +2490,11 @@ m4_ifdef( [[M4_YY_NO_PUSH_STATE]],,
 
 		else
 			YY_G(yy_start_stack) = (int *) yyrealloc(
-					(void *) YY_G(yy_start_stack), new_size M4_YY_CALL_LAST_ARG );
+					(void *) YY_G(yy_start_stack),
+#ifdef YY_BARE_METAL
+					YY_G(yy_start_stack_depth),
+#endif
+					new_size M4_YY_CALL_LAST_ARG );
 
 		if ( ! YY_G(yy_start_stack) )
 			YY_FATAL_ERROR( "out of memory expanding start-condition stack" );
@@ -2460,8 +2548,12 @@ static void yynoreturn yy_fatal_error YYFARGS1(const char*, msg)
 {
 	M4_YY_DECL_GUTS_VAR();
 	M4_YY_NOOP_GUTS_VAR();
+#ifdef YY_BARE_METAL
+	yy_platform_fatal_error(msg);
+#else
 	fprintf( stderr, "%s\n", msg );
 	exit( YY_EXIT_FAILURE );
+#endif
 }
 %endif
 %if-c++-only
@@ -2553,7 +2645,7 @@ m4_ifdef( [[M4_YY_NO_GET_IN]],,
 /** Get the input stream.
  * M4_YY_DOC_PARAM
  */
-FILE *yyget_in  (M4_YY_DEF_ONLY_ARG)
+YY_FILE yyget_in  (M4_YY_DEF_ONLY_ARG)
 {
     M4_YY_DECL_GUTS_VAR();
     return yyin;
@@ -2565,7 +2657,7 @@ m4_ifdef( [[M4_YY_NO_GET_OUT]],,
 /** Get the output stream.
  * M4_YY_DOC_PARAM
  */
-FILE *yyget_out  (M4_YY_DEF_ONLY_ARG)
+YY_FILE yyget_out  (M4_YY_DEF_ONLY_ARG)
 {
     M4_YY_DECL_GUTS_VAR();
     return yyout;
@@ -2663,7 +2755,7 @@ m4_ifdef( [[M4_YY_NO_SET_IN]],,
  * M4_YY_DOC_PARAM
  * @see yy_switch_to_buffer
  */
-void yyset_in YYFARGS1( FILE * ,_in_str)
+void yyset_in YYFARGS1( YY_FILE ,_in_str)
 {
     M4_YY_DECL_GUTS_VAR();
     yyin = _in_str ;
@@ -2672,7 +2764,7 @@ void yyset_in YYFARGS1( FILE * ,_in_str)
 
 m4_ifdef( [[M4_YY_NO_SET_OUT]],,
 [[
-void yyset_out YYFARGS1( FILE * ,_out_str)
+void yyset_out YYFARGS1( YY_FILE ,_out_str)
 {
     M4_YY_DECL_GUTS_VAR();
     yyout = _out_str ;
@@ -2753,20 +2845,24 @@ void yyset_lloc YYFARGS1( YYLTYPE * ,yylloc_param)
  */
 int yylex_init(yyscan_t* ptr_yy_globals)
 {
-    if (ptr_yy_globals == NULL){
+    if (ptr_yy_globals == YY_NULL){
+#ifndef YY_BARE_METAL
         errno = EINVAL;
+#endif
         return 1;
     }
 
-    *ptr_yy_globals = (yyscan_t) yyalloc ( sizeof( struct yyguts_t ), NULL );
+    *ptr_yy_globals = (yyscan_t) yyalloc ( sizeof( struct yyguts_t ), YY_NULL );
 
-    if (*ptr_yy_globals == NULL){
+    if (*ptr_yy_globals == YY_NULL){
+#ifndef YY_BARE_METAL
         errno = ENOMEM;
+#endif
         return 1;
     }
 
     /* By setting to 0xAA, we expose bugs in yy_init_globals. Leave at 0x00 for releases. */
-    memset(*ptr_yy_globals,0x00,sizeof(struct yyguts_t));
+    yy_platform_memset(*ptr_yy_globals,0x00,sizeof(struct yyguts_t));
 
     return yy_init_globals ( *ptr_yy_globals );
 }
@@ -2785,21 +2881,25 @@ int yylex_init_extra( YY_EXTRA_TYPE yy_user_defined, yyscan_t* ptr_yy_globals )
 
     yyset_extra (yy_user_defined, &dummy_yyguts);
 
-    if (ptr_yy_globals == NULL){
+    if (ptr_yy_globals == YY_NULL){
+#ifndef YY_BARE_METAL
         errno = EINVAL;
+#endif
         return 1;
     }
 
     *ptr_yy_globals = (yyscan_t) yyalloc ( sizeof( struct yyguts_t ), &dummy_yyguts );
 
-    if (*ptr_yy_globals == NULL){
+    if (*ptr_yy_globals == YY_NULL){
+#ifndef YY_BARE_METAL
         errno = ENOMEM;
+#endif
         return 1;
     }
 
     /* By setting to 0xAA, we expose bugs in
     yy_init_globals. Leave at 0x00 for releases. */
-    memset(*ptr_yy_globals,0x00,sizeof(struct yyguts_t));
+    yy_platform_memset(*ptr_yy_globals,0x00,sizeof(struct yyguts_t));
 
     yyset_extra (yy_user_defined, *ptr_yy_globals);
 
@@ -2825,10 +2925,10 @@ m4_ifdef( [[M4_YY_USE_LINENO]],
     yylineno =  1;
     ]])
 ]])
-    YY_G(yy_buffer_stack) = NULL;
+    YY_G(yy_buffer_stack) = YY_NULL;
     YY_G(yy_buffer_stack_top) = 0;
     YY_G(yy_buffer_stack_max) = 0;
-    YY_G(yy_c_buf_p) = NULL;
+    YY_G(yy_c_buf_p) = YY_NULL;
     YY_G(yy_init) = 0;
     YY_G(yy_start) = 0;
 
@@ -2836,7 +2936,7 @@ m4_ifdef( [[M4_YY_HAS_START_STACK_VARS]],
 [[
     YY_G(yy_start_stack_ptr) = 0;
     YY_G(yy_start_stack_depth) = 0;
-    YY_G(yy_start_stack) =  NULL;
+    YY_G(yy_start_stack) =  YY_NULL;
 ]])
 
 m4_ifdef( [[M4_YY_USES_REJECT]],
@@ -2855,12 +2955,12 @@ m4_ifdef( [[M4_YY_TEXT_IS_ARRAY]],
 ]])
 
 /* Defined in main.c */
-#ifdef YY_STDINIT
+#if defined(YY_STDINIT) && !defined(YY_BARE_METAL)
     yyin = stdin;
     yyout = stdout;
 #else
-    yyin = NULL;
-    yyout = NULL;
+    yyin = YY_NULL;
+    yyout = YY_NULL;
 #endif
 
     /* For future reference: Set errno on error, since we are called by
@@ -2880,25 +2980,25 @@ int yylex_destroy  (M4_YY_DEF_ONLY_ARG)
     /* Pop the buffer stack, destroying each element. */
 	while(YY_CURRENT_BUFFER){
 		yy_delete_buffer( YY_CURRENT_BUFFER M4_YY_CALL_LAST_ARG );
-		YY_CURRENT_BUFFER_LVALUE = NULL;
+		YY_CURRENT_BUFFER_LVALUE = YY_NULL;
 		yypop_buffer_state(M4_YY_CALL_ONLY_ARG);
 	}
 
 	/* Destroy the stack itself. */
 	yyfree(YY_G(yy_buffer_stack) M4_YY_CALL_LAST_ARG);
-	YY_G(yy_buffer_stack) = NULL;
+	YY_G(yy_buffer_stack) = YY_NULL;
 
 m4_ifdef( [[M4_YY_HAS_START_STACK_VARS]],
 [[
     /* Destroy the start condition stack. */
         yyfree( YY_G(yy_start_stack) M4_YY_CALL_LAST_ARG );
-        YY_G(yy_start_stack) = NULL;
+        YY_G(yy_start_stack) = YY_NULL;
 ]])
 
 m4_ifdef( [[M4_YY_USES_REJECT]],
 [[
     yyfree ( YY_G(yy_state_buf) M4_YY_CALL_LAST_ARG);
-    YY_G(yy_state_buf)  = NULL;
+    YY_G(yy_state_buf)  = YY_NULL;
 ]])
 
     /* Reset the globals. This is important in a non-reentrant scanner so the next time
@@ -2908,7 +3008,7 @@ m4_ifdef( [[M4_YY_USES_REJECT]],
 %if-reentrant
     /* Destroy the main struct (reentrant only). */
     yyfree ( yyscanner M4_YY_CALL_LAST_ARG );
-    yyscanner = NULL;
+    yyscanner = YY_NULL;
 %endif
     return 0;
 }
@@ -2953,16 +3053,19 @@ static int yy_flex_strlen YYFARGS1( const char *,s)
 
 m4_ifdef( [[M4_YY_NO_FLEX_ALLOC]],,
 [[
+#ifndef YY_BARE_METAL
 void *yyalloc YYFARGS1( yy_size_t ,size)
 {
 	M4_YY_DECL_GUTS_VAR();
 	M4_YY_NOOP_GUTS_VAR();
 	return malloc(size);
 }
+#endif
 ]])
 
 m4_ifdef( [[M4_YY_NO_FLEX_REALLOC]],,
 [[
+#ifndef YY_BARE_METAL
 void *yyrealloc  YYFARGS2( void *,ptr, yy_size_t ,size)
 {
 	M4_YY_DECL_GUTS_VAR();
@@ -2977,16 +3080,19 @@ void *yyrealloc  YYFARGS2( void *,ptr, yy_size_t ,size)
 	 */
 	return realloc(ptr, size);
 }
+#endif
 ]])
 
 m4_ifdef( [[M4_YY_NO_FLEX_FREE]],,
 [[
+#ifndef YY_BARE_METAL
 void yyfree YYFARGS1( void *,ptr)
 {
 	M4_YY_DECL_GUTS_VAR();
 	M4_YY_NOOP_GUTS_VAR();
 	free( (char *) ptr );	/* see yyrealloc() for (char *) cast */
 }
+#endif
 ]])
 
 %if-tables-serialization definitions
@@ -3030,8 +3136,8 @@ static int yytbl_read32 (void *v, struct yytbl_reader * rd)
 /** Read the header */
 static int yytbl_hdr_read YYFARGS2(struct yytbl_hdr *, th, struct yytbl_reader *, rd)
 {
-    size_t  bytes;
-    memset (th, 0, sizeof (struct yytbl_hdr));
+    yy_size_t  bytes;
+    yy_platform_memset (th, 0, sizeof (struct yytbl_hdr));
 
     if (yytbl_read32 (&(th->th_magic), rd) != 0)
         return -1;
@@ -3062,19 +3168,19 @@ static int yytbl_hdr_read YYFARGS2(struct yytbl_hdr *, th, struct yytbl_reader *
     if (fread (th->th_version, 1, bytes, rd->fp) != bytes){
         errno = EIO;
         yyfree(th->th_version M4_YY_CALL_LAST_ARG);
-        th->th_version = NULL;
+        th->th_version = YY_NULL;
         return -1;
     }
     else
         rd->bread += (flex_uint32_t) bytes;
 
-    th->th_name = th->th_version + strlen (th->th_version) + 1;
+    th->th_name = th->th_version + yy_platform_strlen (th->th_version) + 1;
     return 0;
 }
 
 /** lookup id in the dmap list.
  *  @param dmap pointer to first element in list
- *  @return NULL if not found.
+ *  @return YY_NULL if not found.
  */
 static struct yytbl_dmap *yytbl_dmap_lookup YYFARGS2(struct yytbl_dmap *, dmap,
                                                       int, id)
@@ -3087,7 +3193,7 @@ static struct yytbl_dmap *yytbl_dmap_lookup YYFARGS2(struct yytbl_dmap *, dmap,
             return dmap;
         else
             dmap++;
-    return NULL;
+    return YY_NULL;
 }
 
 /** Read a table while mapping its contents to the local array.
@@ -3101,7 +3207,7 @@ static int yytbl_data_load YYFARGS2(struct yytbl_dmap *, dmap, struct yytbl_read
     int     len, i, rv, inner_loop_count;
     void   *p=0;
 
-    memset (&td, 0, sizeof (struct yytbl_data));
+    yy_platform_memset (&td, 0, sizeof (struct yytbl_data));
 
     if (yytbl_read16 (&td.td_id, rd) != 0
         || yytbl_read16 (&td.td_flags, rd) != 0
@@ -3115,7 +3221,7 @@ static int yytbl_data_load YYFARGS2(struct yytbl_dmap *, dmap, struct yytbl_read
      */
     transdmap = yytbl_dmap_lookup (dmap, YYTD_ID_TRANSITION M4_YY_CALL_LAST_ARG);
 
-    if ((dmap = yytbl_dmap_lookup (dmap, td.td_id M4_YY_CALL_LAST_ARG)) == NULL){
+    if ((dmap = yytbl_dmap_lookup (dmap, td.td_id M4_YY_CALL_LAST_ARG)) == YY_NULL){
         YY_FATAL_ERROR( "table id not found in map." );   /* TODO: not fatal. */
         return -1;
     }
@@ -3126,7 +3232,7 @@ static int yytbl_data_load YYFARGS2(struct yytbl_dmap *, dmap, struct yytbl_read
      * struct members.
      */
     {
-    size_t  bytes;
+    yy_size_t  bytes;
 
     if ((td.td_flags & YYTD_STRUCT))
         bytes = sizeof(struct yy_trans_info) * td.td_lolen * (td.td_hilen ? td.td_hilen : 1);
@@ -3307,14 +3413,14 @@ static int yytbl_data_load YYFARGS2(struct yytbl_dmap *, dmap, struct yytbl_read
 %define-yytables   The name for this specific scanner's tables.
 
 /* Find the key and load the DFA tables from the given stream.  */
-static int yytbl_fload YYFARGS2(FILE *, fp, const char *, key)
+static int yytbl_fload YYFARGS2(YY_FILE, fp, const char *, key)
 {
     int rv=0;
     struct yytbl_hdr th;
     struct yytbl_reader rd;
 
     rd.fp = fp;
-    th.th_version = NULL;
+    th.th_version = YY_NULL;
 
     /* Keep trying until we find the right set of tables or end of file. */
     while (!feof(rd.fp)) {
@@ -3324,15 +3430,15 @@ static int yytbl_fload YYFARGS2(FILE *, fp, const char *, key)
             goto return_rv;
         }
 
-        /* A NULL key means choose the first set of tables. */
-        if (key == NULL)
+        /* A YY_NULL key means choose the first set of tables. */
+        if (key == YY_NULL)
             break;
 
         if (strcmp(th.th_name,key) != 0){
             /* Skip ahead to next set */
             fseek(rd.fp, th.th_ssize - th.th_hsize, SEEK_CUR);
             yyfree(th.th_version M4_YY_CALL_LAST_ARG);
-            th.th_version = NULL;
+            th.th_version = YY_NULL;
         }
         else
             break;
@@ -3349,14 +3455,14 @@ static int yytbl_fload YYFARGS2(FILE *, fp, const char *, key)
 return_rv:
     if(th.th_version){
         yyfree(th.th_version M4_YY_CALL_LAST_ARG);
-        th.th_version = NULL;
+        th.th_version = YY_NULL;
     }
 
     return rv;
 }
 
 /** Load the DFA tables for this scanner from the given stream.  */
-int yytables_fload YYFARGS1(FILE *, fp)
+int yytables_fload YYFARGS1(YY_FILE, fp)
 {
 
     if( yytbl_fload(fp, YYTABLES_NAME M4_YY_CALL_LAST_ARG) != 0)
@@ -3376,7 +3482,7 @@ int yytables_destroy (M4_YY_DEF_ONLY_ARG)
             v = dmap->dm_arr;
             if(v && *(char**)v){
                     yyfree(*(char**)v M4_YY_CALL_LAST_ARG);
-                    *(char**)v = NULL;
+                    *(char**)v = YY_NULL;
             }
         }
     }
@@ -3416,7 +3522,9 @@ m4_ifdef( [[M4_YY_IN_HEADER]],
 #undef YY_FLUSH_BUFFER
 #undef yy_set_bol
 #undef yy_new_buffer
+#ifndef YY_BARE_METAL
 #undef yy_set_interactive
+#endif
 #undef YY_DO_BEFORE_ACTION
 
 #ifdef YY_DECL_IS_OURS
